@@ -11,4 +11,9 @@ RUN apt-get update && apt-get install -y \
 RUN echo "xdebug.mode=coverage,debug" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+COPY docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["docker-entrypoint.sh"]
 WORKDIR /var/www

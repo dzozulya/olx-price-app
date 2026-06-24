@@ -275,7 +275,13 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
+## Install Composer
+```bash
+docker compose exec app composer install
+```
+
 ---
+
 
 ## Generate application key
 

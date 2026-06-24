@@ -52,7 +52,7 @@ class CheckPriceJob implements ShouldQueue
         if ($lastPrice === null || (int)$lastPrice !== (int)$priceValue) {
 
             NotifySubscribersJob::dispatch(
-                $ad->title,
+                $ad->id,
                 [
                     'price' => $priceValue,
                     'currency' => $currency,
