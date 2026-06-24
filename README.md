@@ -1,58 +1,356 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# OLX Price Tracker
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A Laravel application for monitoring OLX advertisement prices and notifying subscribers when prices change.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+# Features
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- Track OLX advertisement prices
+- Email subscriptions
+- Email verification
+- Scheduled price checks
+- Price history storage
+- Dashboard with chart and history table
+- Queue-based notifications
+- REST API
+- Dockerized environment
+- PostgreSQL + Redis
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+# Architecture
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```text
+HTTP Request
+      |
+Controllers
+      |
+Form Requests
+      |
+Services
+      |
+Jobs / Queue
+      |
+Models
+      |
+PostgreSQL
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Main layers:
 
-## Contributing
+- Controllers – web and API endpoints
+- Form Requests – validation
+- Services – business logic
+- Jobs – background processing
+- Mail – notifications
+- Models – persistence
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+---
 
-## Code of Conduct
+# Database Schema
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## advertisements
 
-## Security Vulnerabilities
+| Column | Type |
+|----------|----------|
+| id | bigint |
+| olx_id | string |
+| title | string |
+| url | text |
+| last_price_value | integer |
+| last_currency | string |
+| last_checked_at | timestamp |
+| created_at | timestamp |
+| updated_at | timestamp |
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
 
-## License
+## subscriptions
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| Column | Type |
+|----------|----------|
+| id | bigint |
+| advertisement_id | bigint |
+| email | string |
+| verification_token | string |
+| verification_token_expires_at | timestamp |
+| verified_at | timestamp |
+| created_at | timestamp |
+| updated_at | timestamp |
+
+---
+
+## price_histories
+
+| Column | Type |
+|----------|----------|
+| id | bigint |
+| advertisement_id | bigint |
+| price_value | integer |
+| currency | string |
+| created_at | timestamp |
+| updated_at | timestamp |
+
+---
+
+# Services
+
+## OlxPriceFetcher
+
+Responsible for:
+
+- Parsing OLX page
+- Extracting:
+    - title
+    - price
+    - currency
+    - olx id
+- Safe fallback strategy
+
+Fallback levels:
+
+1. Structured JSON data
+2. DOM parsing
+3. Regex extraction
+
+---
+
+## DashboardService
+
+Responsible for:
+
+- Advertisement list
+- Price history
+- Chart datasets
+
+---
+
+## NbuExchangeService
+
+Responsible for:
+
+- Fetching NBU exchange rates
+- Currency conversion
+- Exchange rate lookup
+
+---
+
+# Queue Jobs
+
+## DispatchCheckPriceJob
+
+Finds advertisements requiring update and dispatches checking jobs.
+
+---
+
+## CheckPriceJob
+
+Responsible for:
+
+- Fetching current advertisement state
+- Detecting price changes
+- Saving history
+- Updating advertisement snapshot
+- Dispatching notifications
+
+---
+
+## NotifySubscribersJob
+
+Responsible for:
+
+- Sending price change notifications
+- Processing verified subscriptions only
+
+---
+
+# Scheduler
+
+Scheduler runs periodically and dispatches:
+
+```text
+DispatchCheckPriceJob
+        ↓
+CheckPriceJob
+        ↓
+NotifySubscribersJob
+```
+
+Run scheduler:
+
+```bash
+php artisan schedule:work
+```
+
+---
+
+# API
+
+## Create subscription
+
+```http
+POST /api/subscriptions
+```
+
+Request:
+
+```json
+{
+  "url": "https://www.olx.ua/...",
+  "email": "user@example.com"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true
+}
+```
+
+---
+
+# Web Routes
+
+| Method | Route |
+|----------|----------|
+| GET | / |
+| POST | /subscriptions |
+| GET | /dashboard |
+| GET | /dashboard/advertisements/{id} |
+| GET | /verify-email/{token} |
+
+---
+
+# Docker Services
+
+## app
+
+Laravel application container.
+
+## nginx
+
+Web server.
+
+## postgres
+
+Main database.
+
+## redis
+
+Queue backend.
+
+## queue
+
+Queue worker.
+
+## scheduler
+
+Laravel scheduler.
+
+---
+
+# Installation
+
+## Clone repository
+
+```bash
+git clone <repository-url>
+cd olx-price-tracker
+```
+
+---
+
+## Configure environment
+
+```bash
+cp .env.example .env
+```
+
+## Start containers
+
+```bash
+docker compose up -d --build
+```
+
+---
+
+## Generate application key
+
+```bash
+docker compose exec app php artisan key:generate
+```
+
+---
+
+## Run migrations
+
+```bash
+docker compose exec app php artisan migrate
+```
+
+---
+
+# Running Workers
+
+Queue:
+
+```bash
+docker compose exec app php artisan queue:work
+```
+
+Scheduler:
+
+```bash
+docker compose exec app php artisan schedule:work
+```
+
+---
+# RUN APPLICATION(WEB VERSION)
+ ```bash
+ http://localhost:8080/
+ ```
+## email client
+```bash
+http://localhost:8025/
+```
+## dashboard
+```bash
+http://localhost:8080/dashboard
+```
+
+---
+# Testing
+
+Run tests:
+
+```bash
+docker compose exec app php artisan test
+```
+
+
+
+
+
+---
+
+
+
+# Production Notes
+
+For production deployment:
+
+- Enable HTTPS
+- Configure Supervisor for workers
+- Configure scheduled tasks
+- Use Redis queues
+- Configure SMTP provider
+- Enable monitoring and logging
+
+---
+
+# License
+
+MIT
