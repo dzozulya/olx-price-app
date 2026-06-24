@@ -59,12 +59,13 @@ class CheckPriceJob implements ShouldQueue
                 ]
             );
 
-            PriceHistory::create([
-                'advertisement_id' => $ad->id,
-                'price_value'      => $priceValue,
-                'currency'         => $currency,
-            ]);
+
         }
+        PriceHistory::create([
+            'advertisement_id' => $ad->id,
+            'price_value'      => $priceValue,
+            'currency'         => $currency,
+        ]);
 
     }
 

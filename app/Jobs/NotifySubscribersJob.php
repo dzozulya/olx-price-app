@@ -44,7 +44,7 @@ class NotifySubscribersJob implements ShouldQueue
 
             Mail::to($sub->email)->send(
                 new PriceChangedMail(
-                    $ad->olx_id,
+                    $ad->url,
                     $price,
                     $currency
                 )
