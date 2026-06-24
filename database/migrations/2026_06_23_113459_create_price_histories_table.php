@@ -18,14 +18,15 @@ return new class extends Migration
                 ->constrained()
                 ->cascadeOnDelete();
 
-            $table->unsignedBigInteger('price');
+            $table->unsignedBigInteger('price_value');
+            $table->string('currency', 3);
+
 
             $table->timestamps();
 
             $table->index(['advertisement_id', 'created_at']);
         });
     }
-
     /**
      * Reverse the migrations.
      */

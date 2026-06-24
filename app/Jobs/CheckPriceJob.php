@@ -5,18 +5,15 @@ namespace App\Jobs;
 use App\Models\Advertisement;
 use App\Models\PriceHistory;
 use App\Services\Olx\OlxPriceFetcher;
-use App\Events\PriceChanged;
+use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 
 class CheckPriceJob implements ShouldQueue
 {
-    use Queueable;
-    public $timeout = 90;
-    public $tries = 3;
-
-
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public function __construct(
         public int $advertisementId
@@ -24,49 +21,58 @@ class CheckPriceJob implements ShouldQueue
 
     public function handle(OlxPriceFetcher $fetcher): void
     {
-        $lockKey = "olx:check:{$this->advertisementId}";
-
-        // 🚨 Redis lock (анти-дубликаты)
-        if (!Cache::add("olx:lock:{$this->advertisementId}", true, 300)) {
-            return;
-        }
         $ad = Advertisement::find($this->advertisementId);
 
         if (!$ad) {
             return;
         }
 
-        $data = $fetcher->getPrice($ad->url);
+        $data = $fetcher->fetch($ad->url);
 
-        // сравнение через нормализованную цену
-        if ($ad->last_price_uah === $data['price_uah']) {
+        if (!$data || !isset($data['price_value'])) {
             return;
         }
-
-
-        PriceHistory::create([
-            'advertisement_id' => $ad->id,
-            'price' => $data['price'],
-            'currency' => $data['currency'],
-        ]);
-
+        logger()->info(json_encode($data));
+        $priceValue = (int) $data['price_value'];
+        $currency   = strtoupper($data['currency'] ?? 'UAH');
 
         $ad->update([
-            'last_price' => $data['price'],
-            'last_currency' => $data['currency'],
-            'last_price_uah' => $data['price_uah'],
-            'last_checked_at' => now(),
+            'last_price_value' => $priceValue,
+            'last_currency'    => $currency,
+            'last_checked_at'  => now(),
+            'title'            => $data['title'] ?? $ad->title,
         ]);
 
+        $last = PriceHistory::where('advertisement_id', $ad->id)
+            ->latest()
+            ->first();
 
-        PriceChanged::dispatch($ad->id, $data);
+
+            PriceHistory::create([
+                'advertisement_id' => $ad->id,
+                'price_value'      => $priceValue,
+                'currency'         => $currency,
+            ]);
 
 
-        self::dispatch($this->advertisementId)
-            ->delay(now()->addMinutes(5));
+        if (!$last && (int)$last->price_value !== $priceValue) {
+
+            NotifySubscribersJob::dispatch(
+                $ad->title,
+                [
+                    'price' => $priceValue,
+                    'currency' => $currency,
+                ]
+            );
+        }
+
     }
-    public function backoff(): array
+
+    public function failed(\Throwable $e): void
     {
-        return [10, 30, 60];
+        logger()->error('CheckPriceJob FAILED', [
+            'advertisement_id' => $this->advertisementId,
+            'error' => $e->getMessage(),
+        ]);
     }
 }

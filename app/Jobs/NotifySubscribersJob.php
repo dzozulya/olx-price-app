@@ -30,6 +30,10 @@ class NotifySubscribersJob implements ShouldQueue
         }
 
         foreach ($ad->subscriptions as $sub) {
+            if (!$sub->verified_at) {
+                continue;
+            }
+
             Mail::to($sub->email)->send(
                 new PriceChangedMail(
                     $ad->olx_id,

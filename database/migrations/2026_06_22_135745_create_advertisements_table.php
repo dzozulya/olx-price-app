@@ -16,9 +16,13 @@ return new class extends Migration
 
             $table->string('olx_id')->unique();
             $table->string('url');
+            $table->string('title')->nullable();
 
-            $table->unsignedBigInteger('last_price')->nullable();
+            $table->unsignedBigInteger('last_price_value')->nullable();
+            $table->string('last_currency', 3)->nullable(); // UAH, USD, EUR
+
             $table->timestamp('last_checked_at')->nullable();
+            $table->timestamp('last_notified_at')->nullable();
 
             $table->timestamps();
         });

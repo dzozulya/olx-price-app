@@ -20,12 +20,14 @@ return new class extends Migration
 
             $table->string('email');
 
-            $table->boolean('is_verified')->default(false);
-            $table->string('verification_token')->nullable();
+            $table->timestamp('verified_at')->nullable();
+            $table->string('verification_token')->nullable()->unique();
+            $table->timestamp('verification_token_expires_at')->nullable();
 
             $table->timestamps();
 
             $table->unique(['advertisement_id', 'email']);
+            $table->index(['advertisement_id', 'verified_at']);
         });
     }
 

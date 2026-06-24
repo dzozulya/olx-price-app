@@ -59,7 +59,7 @@ services:
       dockerfile: docker/php/Dockerfile
     container_name: olx-price-queue
     working_dir: /var/www
-    command: php artisan queue:work --tries=3
+    command: php artisan queue:work redis --sleep=3 --tries=3 --timeout=90
     volumes:
       - ./:/var/www
     depends_on:
@@ -75,7 +75,7 @@ services:
       dockerfile: docker/php/Dockerfile
     container_name: olx-price-scheduler
     working_dir: /var/www
-    command: sh -c "while true; do php artisan schedule; sleep 60; done"
+    command: php artisan schedule:work
     volumes:
       - ./:/var/www
     depends_on:
@@ -83,6 +83,15 @@ services:
       - postgres
     networks:
       - olx-network
+
+  mailpit:
+      image: axllent/mailpit
+      container_name: olx-price-mailpit
+      ports:
+          - "8025:8025"
+          - "1025:1025"
+      networks:
+          - olx-network
 
 volumes:
   postgres_data:

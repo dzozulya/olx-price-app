@@ -3,18 +3,31 @@
 namespace App\Services;
 
 use App\Models\Advertisement;
+use App\Services\Olx\OlxPriceFetcher;
 use http\Exception\InvalidArgumentException;
 
-class AdvertismentService
+class AdvertisementService
 {
+
+    public function __construct(
+        private  OlxPriceFetcher $fetcher
+    )
+    {
+    }
+
     public function findOrCreate(string $url): Advertisement
     {
         $olxId = $this->extractOlxId($url);
+        $data = $this->fetcher->fetch($url);
+
+
+
 
         return Advertisement::firstOrCreate(
             ['olx_id' => $olxId],
             [
                 'url' => $url,
+                'title'=>$data['title']
             ]
         );
 
@@ -29,14 +42,13 @@ class AdvertismentService
 
     }
 
-    private function extractOlxId(string $url): string
+    function extractOlxId(string $url): ?string
     {
-        preg_match('/ID(\d+)/', $url, $matches);
-        if (!isset($matches[1])) {
-            throw new InvalidArgumentException('Invalid OLX URL');
+        if (preg_match('/-ID([a-zA-Z0-9]+)\.html/', $url, $m)) {
+            return $m[1];
         }
 
-        return $matches[1];
+        return null;
     }
 
 }

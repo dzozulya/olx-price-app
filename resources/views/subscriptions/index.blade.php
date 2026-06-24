@@ -87,6 +87,19 @@
             Subscribe
         </button>
     </form>
+    <br>
+    <a href="{{ route('dashboard.index') }}"
+       style="
+        display:inline-block;
+        padding:10px 20px;
+        background:#2563eb;
+        color:white;
+        text-decoration:none;
+        border-radius:6px;
+        margin-top:10px;
+   ">
+        Dashboard
+    </a>
 
 </div>
 
