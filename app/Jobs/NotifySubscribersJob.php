@@ -16,7 +16,7 @@ class NotifySubscribersJob implements ShouldQueue
     public $tries = 3;
 
     public function __construct(
-        public int $advertisementId,
+        public string $advertisementId,
         public array $data
     ) {}
 
@@ -29,16 +29,24 @@ class NotifySubscribersJob implements ShouldQueue
             return;
         }
 
-        foreach ($ad->subscriptions as $sub) {
-            if (!$sub->verified_at) {
+        $price = $this->data['price'] ?? null;
+        $currency = $this->data['currency'] ?? null;
+
+        if ($price === null || $currency === null) {
+            return;
+        }
+
+        foreach ($ad->subscriptions ?? [] as $sub) {
+
+            if (empty($sub->verified_at)) {
                 continue;
             }
 
             Mail::to($sub->email)->send(
                 new PriceChangedMail(
                     $ad->olx_id,
-                    $this->data['price'],
-                    $this->data['currency']
+                    $price,
+                    $currency
                 )
             );
         }

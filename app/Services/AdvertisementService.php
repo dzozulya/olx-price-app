@@ -19,6 +19,9 @@ class AdvertisementService
     {
         $olxId = $this->extractOlxId($url);
         $data = $this->fetcher->fetch($url);
+        if (!$data) {
+            throw new \RuntimeException('Failed to fetch OLX data');
+        }
 
 
 
@@ -27,7 +30,7 @@ class AdvertisementService
             ['olx_id' => $olxId],
             [
                 'url' => $url,
-                'title'=>$data['title']
+                'title' => $data['title'] ?: 'Unknown OLX Ad',
             ]
         );
 

@@ -47,15 +47,9 @@ class CheckPriceJob implements ShouldQueue
             ->latest()
             ->first();
 
+        $lastPrice = $last?->price_value;
 
-            PriceHistory::create([
-                'advertisement_id' => $ad->id,
-                'price_value'      => $priceValue,
-                'currency'         => $currency,
-            ]);
-
-
-        if (!$last && (int)$last->price_value !== $priceValue) {
+        if ($lastPrice === null || (int)$lastPrice !== (int)$priceValue) {
 
             NotifySubscribersJob::dispatch(
                 $ad->title,
@@ -64,6 +58,12 @@ class CheckPriceJob implements ShouldQueue
                     'currency' => $currency,
                 ]
             );
+
+            PriceHistory::create([
+                'advertisement_id' => $ad->id,
+                'price_value'      => $priceValue,
+                'currency'         => $currency,
+            ]);
         }
 
     }

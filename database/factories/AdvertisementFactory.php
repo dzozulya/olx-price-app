@@ -18,7 +18,11 @@ class AdvertisementFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'olx_id' => 'ID' . fake()->unique()->numberBetween(100000, 999999),
+            'url' => fake()->url(),
+            'title' => fake()->sentence(),
+            'last_price_value' => fake()->numberBetween(1000, 100000),
+            'last_currency' => 'UAH',
         ];
     }
 }
