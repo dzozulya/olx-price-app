@@ -257,8 +257,8 @@ Laravel scheduler.
 ## Clone repository
 
 ```bash
-git clone <repository-url>
-cd olx-price-tracker
+git clone git@github.com:dzozulya/olx-price-app.git
+cd olx-price-app
 ```
 
 ---
